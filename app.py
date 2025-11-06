@@ -37,8 +37,8 @@ from exceptions import MCPServerError
 #   export LOG_LEVEL=DEBUG    # Debugging: maximum verbosity
 # Default: DEBUG (for performance testing and visibility)
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
-PERF_DEBUG = os.getenv("PERF_DEBUG", "TRUE").upper() == "TRUE"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()
+PERF_DEBUG = os.getenv("PERF_DEBUG", "TRUE").upper() == "FALSE" 
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL),

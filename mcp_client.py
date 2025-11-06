@@ -16,7 +16,7 @@ from mcp_server import DatabaseTools
 from exceptions import MCPServerError
 
 logger = logging.getLogger(__name__)
-
+logger.setLevel(getattr(logging, "WARNING"))
 
 class MCPClient:
     """Client for accessing MCP database tools"""
