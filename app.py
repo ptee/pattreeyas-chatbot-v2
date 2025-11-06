@@ -35,10 +35,10 @@ from exceptions import MCPServerError
 #   export LOG_LEVEL=WARNING  # Production: minimal logs, best performance
 #   export LOG_LEVEL=INFO     # Development: detailed logs
 #   export LOG_LEVEL=DEBUG    # Debugging: maximum verbosity
-# Default: WARNING (production-optimized)
+# Default: DEBUG (for performance testing and visibility)
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()
-PERF_DEBUG = os.getenv("PERF_DEBUG", "FALSE").upper() == "FALSE"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
+PERF_DEBUG = os.getenv("PERF_DEBUG", "TRUE").upper() == "TRUE"
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL),
@@ -566,6 +566,7 @@ def llm_reasoning_node(state: LLMCVAgentState, tool_executor: ToolExecutor, conf
     perf_timer_reasoning = PerfTimer(enabled=PERF_DEBUG)
     perf_timer_reasoning.start("llm_reasoning_node")
 
+    logger.debug(f"Starting llm_reasoning_node for query: {state['user_query'][:60]}...")
     messages = state.get("messages", [])
 
     # Add system prompt if this is the first message
@@ -940,13 +941,19 @@ def final_response_node(state: LLMCVAgentState, config: Optional[ConfigManager] 
     # - Semantic tracking initialization (SOLUTION 5)
     # - Follow-up generation with all 5 solutions (SOLUTIONS 2-5)
     # - Error handling and performance timing
-    state = generate_followup_with_skip_check(
-        state=state,
-        final_response=final_response,
-        config=config,
-        perf_timer=perf_timer,
-        logger_instance=logger
-    )
+
+    # OPTIMIZATION OPPORTUNITY: This is currently sequential but could be parallelized
+    # in a future version with the main LLM response generation
+    logger.debug("Starting follow-up question generation...")
+    with perf_timer.timer("followup_question_generation"):
+        state = generate_followup_with_skip_check(
+            state=state,
+            final_response=final_response,
+            config=config,
+            perf_timer=perf_timer,
+            logger_instance=logger
+        )
+    logger.debug("Follow-up question generation completed.")
 
     # Add to conversation history
     conversation_history = state.get("conversation_history", [])
@@ -1510,7 +1517,8 @@ def main():
         if st.button("🔄 Clear Conversation"):
             st.session_state.conversation = []
             st.session_state.question_keywords = []
-            st.rerun()
+            # Note: st.rerun() in button callback is a no-op in Streamlit 1.27+
+            # The button click automatically triggers a rerun
 
     # Callback function for follow-up button click
     def on_followup_click(followup_q: str):
@@ -1522,8 +1530,8 @@ def main():
         # Store the follow-up question to be auto-submitted
         st.session_state.auto_submit_followup = followup_q
         logger.info(f"Follow-up button clicked: '{followup_q[:60]}...'")
-        # Rerun to process the auto-submitted question
-        st.rerun()
+        # Note: st.rerun() in on_click callback is a no-op in Streamlit 1.27+
+        # The button click automatically triggers a rerun
 
     # Chat input
     user_input = st.chat_input("Ask me anything about Pattreeya ...")

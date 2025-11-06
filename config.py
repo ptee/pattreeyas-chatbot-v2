@@ -25,6 +25,7 @@ from exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+logger.setLevel(getattr(logging, "WARNING"))
 
 
 # ============================================================================
