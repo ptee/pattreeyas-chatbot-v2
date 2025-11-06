@@ -25,7 +25,7 @@ from exceptions import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, "WARNING"))
+logger.setLevel(getattr(logging, "WARNING"))  # Default to WARNING, can be configured externally
 
 # ============================================================================
 # POSTGRESQL DATABASE MANAGER
