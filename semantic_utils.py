@@ -14,6 +14,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from config import get_config, ConfigManager
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)  # Set semantic_utils logging to WARNING level
 
 
 # ============================================================================
