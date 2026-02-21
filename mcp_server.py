@@ -26,13 +26,8 @@ from exceptions import (
     MCPServerError,
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.WARN,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Initialize logger (will be configured by config.configure_logging() at application startup)
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, "WARNING"))
 
 # ============================================================================
 # DIAGNOSTIC UTILITIES
@@ -275,7 +270,7 @@ class DatabaseTools:
             cv_id = self.config.get_cv_id()
             results = self.pg_manager.fetch_all("""
                 SELECT company, role, location, start_date, end_date, is_current,
-                       technologies, skills, domain, seniority, team_size
+                       technologies, skills, domain, seniority, team_size, content
                 FROM work_experience
                 WHERE cv_id = %s AND company ILIKE %s
                 ORDER BY start_date DESC
@@ -422,7 +417,7 @@ class DatabaseTools:
 
             if institution:
                 results = self.pg_manager.fetch_all("""
-                    SELECT institution, degree, field, specialization, graduation_date, thesis, publications
+                    SELECT institution, degree, field, specialization, graduation_date, thesis, publications, content
                     FROM education
                     WHERE cv_id = %s AND institution ILIKE %s
                 """, (cv_id, f"%{institution}%"))
@@ -430,7 +425,7 @@ class DatabaseTools:
 
             elif degree:
                 results = self.pg_manager.fetch_all("""
-                    SELECT institution, degree, field, specialization, graduation_date, thesis
+                    SELECT institution, degree, field, specialization, graduation_date, thesis, content
                     FROM education
                     WHERE cv_id = %s AND degree ILIKE %s
                 """, (cv_id, f"%{degree}%"))
@@ -438,7 +433,7 @@ class DatabaseTools:
 
             else:
                 results = self.pg_manager.fetch_all("""
-                    SELECT institution, degree, field, specialization, graduation_date, thesis
+                    SELECT institution, degree, field, specialization, graduation_date, thesis, content
                     FROM education
                     WHERE cv_id = %s
                 """, (cv_id,))
@@ -573,7 +568,7 @@ class DatabaseTools:
 
             if award_type:
                 results = self.pg_manager.fetch_all("""
-                    SELECT title, issuing_organization, organization, issue_date, keywords
+                    SELECT title, issuing_organization, organization, issue_date, keywords, content
                     FROM awards_certifications
                     WHERE cv_id = %s AND (issuing_organization ILIKE %s OR organization ILIKE %s OR title ILIKE %s)
                     ORDER BY issue_date DESC
@@ -582,7 +577,7 @@ class DatabaseTools:
 
             else:
                 results = self.pg_manager.fetch_all("""
-                    SELECT title, issuing_organization, organization, issue_date, keywords
+                    SELECT title, issuing_organization, organization, issue_date, keywords, content
                     FROM awards_certifications
                     WHERE cv_id = %s
                     ORDER BY issue_date DESC
@@ -682,11 +677,15 @@ class DatabaseTools:
                         formatted_result["thesis"] = result.payload.get("thesis")
                     if result.payload.get("graduation_date"):
                         formatted_result["graduation_date"] = result.payload.get("graduation_date")
+                    if result.payload.get("description"):
+                        formatted_result["description"] = result.payload.get("description")
 
                 # Publication specific fields
                 elif section_value == "publication":
                     if result.payload.get("title"):
                         formatted_result["title"] = result.payload.get("title")
+                    if result.payload.get("description"):
+                        formatted_result["description"] = result.payload.get("description")
 
                 # Projects specific fields
                 elif section_value == "projects":
@@ -696,12 +695,17 @@ class DatabaseTools:
                         formatted_result["responsibility"] = result.payload.get("responsibility")
                     if result.payload.get("technologies"):
                         formatted_result["technologies"] = result.payload.get("technologies")
+                    if result.payload.get("description"):
+                        formatted_result["description"] = result.payload.get("description")
 
                 # Common optional fields
                 if result.payload.get("technologies"):
                     formatted_result["technologies"] = result.payload.get("technologies")
                 if result.payload.get("skills"):
                     formatted_result["skills"] = result.payload.get("skills")
+                # Catch-all: surface description for skills, awards, and any other section
+                if result.payload.get("description") and "description" not in formatted_result:
+                    formatted_result["description"] = result.payload.get("description")
 
                 formatted_results.append(formatted_result)
 
@@ -769,7 +773,7 @@ class DatabaseTools:
             cv_id = self.config.get_cv_id()
             results = self.pg_manager.fetch_all("""
                 SELECT company, role, location, start_date, end_date, is_current,
-                       technologies, skills, domain, seniority, team_size
+                       technologies, skills, domain, seniority, team_size, content
                 FROM work_experience
                 WHERE cv_id = %s
                 ORDER BY start_date DESC

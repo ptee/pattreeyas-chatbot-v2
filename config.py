@@ -27,6 +27,15 @@ from exceptions import (
 logger = logging.getLogger(__name__)
 logger.setLevel(getattr(logging, "WARNING"))
 
+# Valid logging levels
+VALID_LOG_LEVELS = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL,
+}
+
 
 # ============================================================================
 # CONFIGURATION MANAGER CLASS
@@ -199,6 +208,130 @@ class ConfigManager:
     def get_qdrant_api_key(self) -> str:
         """Get Qdrant API key"""
         return self.get("db", "qdrant_api_key", "")
+
+    # ========================================================================
+    # LOGGING CONFIGURATION METHODS
+    # ========================================================================
+
+    def get_log_level(self) -> int:
+        """
+        Get logging level from configuration (secrets.toml [log] section)
+
+        Priority:
+        1. Environment variable LOG_LEVEL (overrides everything)
+        2. Secrets configuration [log] section "level" key
+        3. Default: WARNING (production mode)
+
+        Returns:
+            int: Logging level constant from logging module
+        """
+        # Priority 1: Environment variable (can override secrets)
+        env_level = os.getenv("LOG_LEVEL", "").lower()
+        if env_level in VALID_LOG_LEVELS:
+            logger.debug(f"Using LOG_LEVEL from environment: {env_level.upper()}")
+            return VALID_LOG_LEVELS[env_level]
+
+        # Priority 2: Secrets configuration [log] section
+        # Access the config directly to get the entire [log] section
+        log_section = self._config.get("log", {})
+        if isinstance(log_section, dict):
+            config_level = log_section.get("level", "").lower()
+            if config_level in VALID_LOG_LEVELS:
+                logger.debug(f"Using log level from secrets.toml: {config_level.upper()}")
+                return VALID_LOG_LEVELS[config_level]
+
+        # Priority 3: Default (production mode)
+        logger.debug("Using default log level: WARNING (production mode)")
+        return logging.WARNING
+
+    def get_log_level_name(self) -> str:
+        """
+        Get human-readable name of the logging level
+
+        Returns:
+            str: Logging level name (e.g., "DEBUG", "INFO", "WARNING")
+        """
+        level = self.get_log_level()
+        return logging.getLevelName(level)
+
+    def configure_logging(self) -> int:
+        """
+        Configure logging system for all modules
+
+        This method:
+        1. Gets the logging level from configuration
+        2. Configures the root logger
+        3. Updates all existing loggers
+        4. Returns the configured level
+
+        Should be called at application startup (before importing other modules).
+
+        Returns:
+            int: The logging level that was configured
+
+        Example:
+            from config import get_config
+
+            config = get_config()
+            log_level = config.configure_logging()
+            print(f"Logging configured to {logging.getLevelName(log_level)}")
+        """
+        level = self.get_log_level()
+        level_name = logging.getLevelName(level)
+
+        # Configure root logger
+        logging.basicConfig(
+            level=level,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            force=True,  # Override any existing configuration
+        )
+
+        # Update root logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(level)
+
+        # Update all existing loggers to use the new level
+        for logger_name in logging.root.manager.loggerDict:
+            logging.getLogger(logger_name).setLevel(level)
+
+        # Update our module logger
+        logger.setLevel(level)
+        logger.info(f"✓ Logging configured to {level_name} level")
+
+        return level
+
+    def print_logging_config(self) -> str:
+        """
+        Print current logging configuration for debugging
+
+        Returns:
+            str: Human-readable logging configuration summary
+        """
+        level_name = self.get_log_level_name()
+        env_level = os.getenv("LOG_LEVEL", "NOT SET")
+        log_section = self._config.get("log", {})
+        secrets_level = log_section.get("level", "NOT SET") if isinstance(log_section, dict) else "NOT SET"
+
+        config_summary = f"""
+================================================================================
+LOGGING CONFIGURATION
+================================================================================
+Current Level: {level_name}
+
+Configuration Priority:
+  1. Environment Variable (LOG_LEVEL): {env_level}
+  2. Secrets File [log] section: {secrets_level}
+  3. Default: WARNING (Production Mode)
+
+To Change Logging:
+  1. Environment: export LOG_LEVEL=debug    # or info, warning, error, critical
+  2. Secrets: Edit .streamlit/secrets.toml [log] section
+     [log]
+     level = "debug"
+  3. Code: config.configure_logging() (uses current configuration)
+================================================================================
+"""
+        return config_summary
 
     # ========================================================================
     # CV ID MANAGEMENT

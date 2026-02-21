@@ -16,7 +16,7 @@ from mcp_server import DatabaseTools
 from exceptions import MCPServerError
 
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, "WARNING"))
+# Logging level will be configured by config.configure_logging() at application startup
 
 class MCPClient:
     """Client for accessing MCP database tools"""
@@ -122,7 +122,8 @@ class MCPClient:
 
         Returns:
             Dict with all work records including company, role, location, dates,
-            technologies, skills, domain, seniority, and team size
+            technologies, skills, domain, seniority, team size, and content
+            (full descriptive text of responsibilities and achievements)
         """
         return self.tools.get_all_work_experience()
 
@@ -199,7 +200,7 @@ class MCPClient:
             },
             {
                 "name": "get_all_work_experience",
-                "description": "⭐ PRIMARY TOOL: Get COMPLETE work experience history in chronological order - ALL jobs at once. MUST USE for any 'experience', 'work history', 'career history', 'jobs', 'career timeline', 'work background' questions. Returns all work records with company, role, dates, technologies, skills, domain, seniority, team size.",
+                "description": "⭐ PRIMARY TOOL: Get COMPLETE work experience history in chronological order - ALL jobs at once. MUST USE for any 'experience', 'work history', 'career history', 'jobs', 'career timeline', 'work background' questions. Returns all work records with company, role, dates, technologies, skills, domain, seniority, team size, and content (full responsibility/achievement description).",
                 "parameters": {}
             }
         ]

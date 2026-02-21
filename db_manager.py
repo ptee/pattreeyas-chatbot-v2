@@ -12,6 +12,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from config import ConfigManager, get_config
 from exceptions import (
@@ -25,7 +27,7 @@ from exceptions import (
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, "WARNING"))  # Default to WARNING, can be configured externally
+# Logging level will be configured by config.configure_logging() at application startup
 
 # ============================================================================
 # POSTGRESQL DATABASE MANAGER
@@ -414,7 +416,8 @@ class QdrantManager:
             self.client = QdrantClient(
                 url=self.config.get_qdrant_url(),
                 api_key=self.config.get_qdrant_api_key(),
-                prefer_grpc=False
+                prefer_grpc=False,
+                verify=False  # Skip SSL cert verification (expired server cert)
             )
             # Verify connection by checking health
             self.client.get_collections()
@@ -464,7 +467,8 @@ class QdrantManager:
 
             distance = {
                 "COSINE": Distance.COSINE,
-                "EUCLIDEAN": Distance.EUCLIDEAN,
+                "EUCLIDEAN": Distance.EUCLID,
+                "EUCLID": Distance.EUCLID,
                 "DOT": Distance.DOT,
             }.get(distance_metric.upper(), Distance.COSINE)
 
