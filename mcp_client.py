@@ -128,6 +128,20 @@ class MCPClient:
         return self.tools.get_all_work_experience()
 
     # ========================================================================
+    # Tool 11: Search Languages
+    # ========================================================================
+    def search_languages(self, language: Optional[str] = None) -> Dict[str, Any]:
+        """Find languages and their proficiency levels"""
+        return self.tools.search_languages(language)
+
+    # ========================================================================
+    # Tool 12: Search Work References
+    # ========================================================================
+    def search_work_references(self, reference_name: Optional[str] = None, company: Optional[str] = None) -> Dict[str, Any]:
+        """Find professional work references by name or company"""
+        return self.tools.search_work_references(reference_name, company)
+
+    # ========================================================================
     # Tool Registry
     # ========================================================================
     def get_available_tools(self) -> List[Dict[str, Any]]:
@@ -202,6 +216,21 @@ class MCPClient:
                 "name": "get_all_work_experience",
                 "description": "⭐ PRIMARY TOOL: Get COMPLETE work experience history in chronological order - ALL jobs at once. MUST USE for any 'experience', 'work history', 'career history', 'jobs', 'career timeline', 'work background' questions. Returns all work records with company, role, dates, technologies, skills, domain, seniority, team size, and content (full responsibility/achievement description).",
                 "parameters": {}
+            },
+            {
+                "name": "search_languages",
+                "description": "Find languages and their proficiency levels",
+                "parameters": {
+                    "language": {"type": "string", "description": "Language name to filter (optional, e.g., 'English', 'German', 'Thai')"}
+                }
+            },
+            {
+                "name": "search_work_references",
+                "description": "Find professional work references by name or company",
+                "parameters": {
+                    "reference_name": {"type": "string", "description": "Name of the reference person (optional)"},
+                    "company": {"type": "string", "description": "Company or institution (optional)"}
+                }
             }
         ]
 
@@ -246,6 +275,15 @@ class MCPClient:
 
         elif tool_name == "get_all_work_experience":
             return self.get_all_work_experience()
+
+        elif tool_name == "search_languages":
+            return self.search_languages(language=kwargs.get("language"))
+
+        elif tool_name == "search_work_references":
+            return self.search_work_references(
+                reference_name=kwargs.get("reference_name"),
+                company=kwargs.get("company")
+            )
 
         else:
             return {

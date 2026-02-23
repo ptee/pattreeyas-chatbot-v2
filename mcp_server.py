@@ -801,6 +801,115 @@ class DatabaseTools:
                 "error": str(e)
             }
 
+    # ========================================================================
+    # TOOL 11: Search Languages
+    # ========================================================================
+    def search_languages(self, language: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Find languages and their proficiency levels.
+
+        Args:
+            language: Language name to filter (optional, e.g., 'English', 'German', 'Thai')
+
+        Returns:
+            Dict with language proficiency records
+        """
+        try:
+            cv_id = self.config.get_cv_id()
+
+            if language:
+                results = self.pg_manager.fetch_all("""
+                    SELECT language, proficiency_level
+                    FROM languages
+                    WHERE cv_id = %s AND language ILIKE %s
+                    ORDER BY language
+                """, (cv_id, f"%{language}%"))
+                search_type = f"language: {language}"
+            else:
+                results = self.pg_manager.fetch_all("""
+                    SELECT language, proficiency_level
+                    FROM languages
+                    WHERE cv_id = %s
+                    ORDER BY language
+                """, (cv_id,))
+                search_type = "all languages"
+
+            logger.info(f"Found {len(results)} language records for {search_type}")
+            return {
+                "status": "success",
+                "tool": "search_languages",
+                "search_type": search_type,
+                "results_count": len(results),
+                "results": results
+            }
+
+        except Exception as e:
+            logger.error(f"Error in search_languages: {e}")
+            return {
+                "status": "error",
+                "tool": "search_languages",
+                "error": str(e)
+            }
+
+    # ========================================================================
+    # TOOL 12: Search Work References
+    # ========================================================================
+    def search_work_references(self, reference_name: Optional[str] = None, company: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Find professional work references by name or company.
+
+        Args:
+            reference_name: Name of the reference person (optional)
+            company: Company or institution (optional)
+
+        Returns:
+            Dict with work reference records
+        """
+        try:
+            cv_id = self.config.get_cv_id()
+
+            if reference_name:
+                results = self.pg_manager.fetch_all("""
+                    SELECT name, position, company, email, note
+                    FROM work_references
+                    WHERE cv_id = %s AND name ILIKE %s
+                    ORDER BY name
+                """, (cv_id, f"%{reference_name}%"))
+                search_type = f"name: {reference_name}"
+            elif company:
+                results = self.pg_manager.fetch_all("""
+                    SELECT name, position, company, email, note
+                    FROM work_references
+                    WHERE cv_id = %s AND company ILIKE %s
+                    ORDER BY name
+                """, (cv_id, f"%{company}%"))
+                search_type = f"company: {company}"
+            else:
+                results = self.pg_manager.fetch_all("""
+                    SELECT name, position, company, email, note
+                    FROM work_references
+                    WHERE cv_id = %s
+                    ORDER BY name
+                """, (cv_id,))
+                search_type = "all references"
+
+            logger.info(f"Found {len(results)} work reference records for {search_type}")
+            return {
+                "status": "success",
+                "tool": "search_work_references",
+                "search_type": search_type,
+                "results_count": len(results),
+                "results": results
+            }
+
+        except Exception as e:
+            logger.error(f"Error in search_work_references: {e}")
+            return {
+                "status": "error",
+                "tool": "search_work_references",
+                "error": str(e)
+            }
+
 
 # ============================================================================
 # MCP SERVER SETUP
