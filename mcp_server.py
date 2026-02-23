@@ -852,6 +852,50 @@ class DatabaseTools:
             }
 
     # ========================================================================
+    # TOOL 13: Get Contact Information
+    # ========================================================================
+    def get_contact_info(self) -> Dict[str, Any]:
+        """
+        Get Pattreeya's contact information directly from cv_metadata.
+
+        Returns email, alternative email, LinkedIn profile URL, and GitHub URL
+        without going through the LLM.
+
+        Returns:
+            Dict with contact fields: name, email, email_alt, linkedin, github
+        """
+        try:
+            cv_id = self.config.get_cv_id()
+            result = self.pg_manager.fetch_one("""
+                SELECT name, email, email_alt, linkedin, github
+                FROM cv_metadata
+                WHERE id = %s
+            """, (cv_id,))
+
+            if result:
+                logger.info("Contact information retrieved successfully")
+                return {
+                    "status": "success",
+                    "tool": "get_contact_info",
+                    "data": dict(result)
+                }
+            else:
+                logger.warning("No contact information found in cv_metadata")
+                return {
+                    "status": "error",
+                    "tool": "get_contact_info",
+                    "error": "Contact information not found"
+                }
+
+        except Exception as e:
+            logger.error(f"Error in get_contact_info: {e}")
+            return {
+                "status": "error",
+                "tool": "get_contact_info",
+                "error": str(e)
+            }
+
+    # ========================================================================
     # TOOL 12: Search Work References
     # ========================================================================
     def search_work_references(self, reference_name: Optional[str] = None, company: Optional[str] = None) -> Dict[str, Any]:

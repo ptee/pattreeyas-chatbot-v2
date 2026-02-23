@@ -130,6 +130,49 @@ perf_timer = PerfTimer(enabled=PERF_DEBUG)
 
 
 # ============================================================================
+# 0. CONTACT QUERY HANDLER - Bypasses LLM entirely
+# ============================================================================
+
+# Keywords that indicate the user is asking for contact information
+_CONTACT_KEYWORDS = [
+    "contact", "email", "e-mail", "linkedin", "github",
+    "reach her", "reach pattreeya", "how to contact", "get in touch",
+    "contact info", "contact information", "her profile", "her link",
+    "social media", "online profile", "website"
+]
+
+
+def is_contact_query(user_query: str) -> bool:
+    """Detect if query is asking for contact/profile information (no LLM needed)"""
+    query_lower = user_query.lower()
+    return any(kw in query_lower for kw in _CONTACT_KEYWORDS)
+
+
+def format_contact_response(result: Dict[str, Any]) -> str:
+    """Format contact info MCP result into a readable response string"""
+    if result.get("status") != "success":
+        return "Sorry, I couldn't retrieve contact information at this time."
+
+    data = result.get("data", {})
+    name = data.get("name", "Pattreeya")
+    lines = [f"Here is {name}'s contact information:\n"]
+
+    if data.get("email"):
+        lines.append(f"- **Email:** {data['email']}")
+    if data.get("email_alt"):
+        lines.append(f"- **Alternative Email:** {data['email_alt']}")
+    if data.get("linkedin"):
+        lines.append(f"- **LinkedIn:** {data['linkedin']}")
+    if data.get("github"):
+        lines.append(f"- **GitHub:** {data['github']}")
+
+    if len(lines) == 1:
+        return "No contact information is available at this time."
+
+    return "\n".join(lines)
+
+
+# ============================================================================
 # 1. STATE DEFINITION FOR LLM AGENT
 # ============================================================================
 
@@ -588,7 +631,7 @@ def llm_reasoning_node(state: LLMCVAgentState, tool_executor: ToolExecutor, conf
         llm = ChatOpenAI(
             api_key=config.get_api_key(),
             model=config.get_model(),
-            temperature=0.5,  # Increased from 0.3 for better tool-calling behavior
+            temperature=0.4,  # Increased from 0.3 for better tool-calling behavior
             max_tokens=1024
         )
 
@@ -1624,20 +1667,25 @@ def main():
             "search_type": keyword_classification.get("search_type", "unknown")
         })
 
-        # Get response from LLM agent with thinking indicator
+        # Get response from LLM agent (or direct MCP for contact queries)
         response_text = ""
         followup_question = ""
 
         with st.chat_message("assistant"):
             with st.spinner("🤔 Thinking..."):
                 try:
-                    # EXPERIMENTAL: Pass keyword classification for keyword injection
-                    response_text = execute_llm_cv_query(
-                        pending_user_query,
-                        cv_id,
-                        tool_executor,
-                        config
-                    )
+                    # SHORT-CIRCUIT: Handle contact queries directly via MCP (no LLM)
+                    if is_contact_query(pending_user_query):
+                        logger.info("Contact query detected — fetching directly from MCP (bypassing LLM)")
+                        contact_result = tool_executor.mcp_client.get_contact_info()
+                        response_text = format_contact_response(contact_result)
+                    else:
+                        response_text = execute_llm_cv_query(
+                            pending_user_query,
+                            cv_id,
+                            tool_executor,
+                            config
+                        )
 
                 except Exception as e:
                     response_text = f"❌ Error processing query: {e}"

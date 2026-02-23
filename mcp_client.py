@@ -142,6 +142,13 @@ class MCPClient:
         return self.tools.search_work_references(reference_name, company)
 
     # ========================================================================
+    # Tool 13: Get Contact Information (bypasses LLM)
+    # ========================================================================
+    def get_contact_info(self) -> Dict[str, Any]:
+        """Get Pattreeya's contact information directly from cv_metadata"""
+        return self.tools.get_contact_info()
+
+    # ========================================================================
     # Tool Registry
     # ========================================================================
     def get_available_tools(self) -> List[Dict[str, Any]]:
